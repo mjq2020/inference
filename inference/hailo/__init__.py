@@ -1,3 +1,3 @@
-from .hailo import *
-from .onnxruntime import *
-from .utils import *
+from .converter import *  # noqa
+from .utils import *  # noqa
+from .infer import *  # noqa
