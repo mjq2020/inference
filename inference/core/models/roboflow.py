@@ -61,6 +61,8 @@ from inference.core.utils.onnx import get_onnxruntime_execution_providers
 from inference.core.utils.preprocess import letterbox_image, prepare
 from inference.core.utils.visualisation import draw_detection_predictions
 from inference.models.aliases import resolve_roboflow_model_alias
+from inference.hailo.infer.hailort import HailoRTInference
+from inference.hailo.utils.devices import get_optimal_providen
 
 NUM_S3_RETRY = 5
 SLEEP_SECONDS_BETWEEN_RETRIES = 3
@@ -608,6 +610,7 @@ class OnnxRoboflowInferenceModel(RoboflowInferenceModel):
                 expanded_execution_providers.append(ep)
             self.onnxruntime_execution_providers = expanded_execution_providers
 
+        self.hailoProvider = get_optimal_providen()
         self.initialize_model()
         self.image_loader_threadpool = ThreadPoolExecutor(max_workers=None)
         try:
@@ -703,17 +706,24 @@ class OnnxRoboflowInferenceModel(RoboflowInferenceModel):
             if not self.load_weights:
                 providers = ["OpenVINOExecutionProvider", "CPUExecutionProvider"]
             try:
-                session_options = onnxruntime.SessionOptions()
-                # TensorRT does better graph optimization for its EP than onnx
-                if has_trt(providers):
-                    session_options.graph_optimization_level = (
-                        onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+                if self.hailoProvider:
+                    # convert onnx to hailort
+                    self.onnx_session = HailoRTInference(
+                        hef_file=self.cache_file(self.weights_file),
+                        arch=self.hailoProvider,
                     )
-                self.onnx_session = onnxruntime.InferenceSession(
-                    self.cache_file(self.weights_file),
-                    providers=providers,
-                    sess_options=session_options,
-                )
+                else:
+                    session_options = onnxruntime.SessionOptions()
+                    # TensorRT does better graph optimization for its EP than onnx
+                    if has_trt(providers):
+                        session_options.graph_optimization_level = (
+                            onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+                        )
+                    self.onnx_session = onnxruntime.InferenceSession(
+                        self.cache_file(self.weights_file),
+                        providers=providers,
+                        sess_options=session_options,
+                    )
             except Exception as e:
                 self.clear_cache()
                 raise ModelArtefactError(
