@@ -16,8 +16,11 @@ from inference.core.env import (
     WORKFLOWS_CUSTOM_PYTHON_EXECUTION_MODE,
 )
 from inference.core.exceptions import WorkspaceLoadError
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    from inference.core.roboflow_api import get_roboflow_workspace
 from inference.core.logger import logger
-from inference.core.roboflow_api import get_roboflow_workspace
 from inference.core.workflows.errors import (
     DynamicBlockCodeError,
     DynamicBlockError,
@@ -54,7 +57,11 @@ from inference.usage_tracking.block_execution import (
     peek_measured_block_execution,
     record_measured_block_execution,
 )
-from inference.usage_tracking.collector import usage_collector
+
+if IS_RV1126B:
+    from inference.usage_tracking.edge import usage_collector
+else:
+    from inference.usage_tracking.collector import usage_collector
 
 try:
     from inference_sdk.config import execution_id as _execution_id_ctxvar

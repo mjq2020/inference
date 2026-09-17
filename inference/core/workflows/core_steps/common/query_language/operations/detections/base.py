@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 from copy import copy, deepcopy
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import supervision as sv
-import torch
+
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    import torch
+
 from supervision import Position
 
 from inference.core.env import ENABLE_TENSOR_DATA_REPRESENTATION
@@ -26,20 +33,29 @@ from inference.core.workflows.core_steps.common.query_language.operations.utils 
 from inference.core.workflows.core_steps.common.serializers import (
     serialise_sv_detections,
 )
-from inference.core.workflows.core_steps.common.serializers_tensor import (
-    serialise_sv_detections as serialise_tensor_native_detections,
-)
-from inference.core.workflows.core_steps.common.tensor_native import (
-    strip_host_mirror_metadata,
-)
+
+if not IS_RV1126B:
+    from inference.core.workflows.core_steps.common.serializers_tensor import (
+        serialise_sv_detections as serialise_tensor_native_detections,
+    )
+if not IS_RV1126B:
+    from inference.core.workflows.core_steps.common.tensor_native import (
+        strip_host_mirror_metadata,
+    )
+
 from inference.core.workflows.execution_engine.constants import (
     CLASS_NAME_KEY,
     CLASS_NAMES_KEY,
 )
-from inference_models.models.base.instance_segmentation import InstanceDetections
-from inference_models.models.base.keypoints_detection import KeyPoints
-from inference_models.models.base.object_detection import Detections
-from inference_models.models.base.types import InstancesRLEMasks
+
+if not IS_RV1126B:
+    from inference_models.models.base.instance_segmentation import InstanceDetections
+if not IS_RV1126B:
+    from inference_models.models.base.keypoints_detection import KeyPoints
+if not IS_RV1126B:
+    from inference_models.models.base.object_detection import Detections
+if not IS_RV1126B:
+    from inference_models.models.base.types import InstancesRLEMasks
 
 
 def detections_anchor_coordinates(
@@ -473,13 +489,15 @@ def _is_point_within_box(point: np.ndarray, box: np.ndarray) -> bool:
     return x1 <= px <= x2 and y1 <= py <= y2
 
 
-TensorNativeDetections = Union[Detections, InstanceDetections]
-TENSOR_NATIVE_DETECTIONS_TYPES = (Detections, InstanceDetections)
+TensorNativeDetections = Any if IS_RV1126B else Union[Detections, InstanceDetections]
+TENSOR_NATIVE_DETECTIONS_TYPES = () if IS_RV1126B else (Detections, InstanceDetections)
 # A keypoint-detection prediction kind is carried as a 2-tuple
 # (KeyPoints, Optional[Detections]); the bounding-box component is operated on by
 # the UQL detections ops and the KeyPoints component is sliced / shifted to match.
 KeyPointPrediction = tuple
-TensorNativePrediction = Union[Detections, InstanceDetections, "KeyPointPrediction"]
+TensorNativePrediction = (
+    Any if IS_RV1126B else Union[Detections, InstanceDetections, "KeyPointPrediction"]
+)
 
 
 def _is_key_point_prediction(value: Any) -> bool:

@@ -1,11 +1,14 @@
-from redis.exceptions import ConnectionError, TimeoutError
-
 from inference.core import logger
 from inference.core.cache.memory import MemoryCache
-from inference.core.cache.redis import RedisCache
 from inference.core.env import REDIS_HOST, REDIS_PORT, REDIS_SSL, REDIS_TIMEOUT
+from inference.runtime import IS_RV1126B
 
-if REDIS_HOST is not None:
+if not IS_RV1126B:
+    from redis.exceptions import ConnectionError, TimeoutError
+
+    from inference.core.cache.redis import RedisCache
+
+if not IS_RV1126B and REDIS_HOST is not None:
     try:
         cache = RedisCache(
             host=REDIS_HOST, port=REDIS_PORT, ssl=REDIS_SSL, timeout=REDIS_TIMEOUT

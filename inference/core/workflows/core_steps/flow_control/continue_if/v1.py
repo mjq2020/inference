@@ -120,7 +120,7 @@ class BlockManifest(WorkflowBlockManifest):
     stop_delay: Union[Selector(kind=[FLOAT_KIND]), float] = Field(
         title="Stop Delay",
         description="Number of seconds to continue execution after the condition becomes false, before terminating the branch. If the condition was previously true and then becomes false, execution continues to next_steps for this delay duration before terminating. This is useful for handling transient state changes or preventing rapid on/off toggling. Must be greater than 0 to take effect. Set to 0 (default) to terminate immediately when condition becomes false.",
-        gt=0,
+        ge=0,
         examples=[5],
         default=0,
     )

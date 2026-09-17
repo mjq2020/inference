@@ -1,9 +1,17 @@
 from contextlib import contextmanager
 from typing import Any, Optional
 
-from redis.exceptions import LockNotOwnedError
-
 from inference.core import logger
+from inference.runtime import IS_RV1126B
+
+if IS_RV1126B:
+    # A threading.Lock has no Redis TTL exception. An empty exception tuple
+    # preserves ordinary lock errors without importing a remote cache client.
+    _LOCK_NOT_OWNED_ERRORS = ()
+else:
+    from redis.exceptions import LockNotOwnedError
+
+    _LOCK_NOT_OWNED_ERRORS = (LockNotOwnedError,)
 
 
 class BaseCache:
@@ -107,7 +115,7 @@ class BaseCache:
             logger.debug(f"Releasing lock at cache key: {key}")
             try:
                 l.release()
-            except LockNotOwnedError:
+            except _LOCK_NOT_OWNED_ERRORS:
                 # Lock TTL expired before release - this is expected in some cases
                 # codeql[py/clear-text-logging-sensitive-data]: TTL expiry on cache key.
                 logger.warning(f"Lock at cache key {key} expired before release")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, List, Union
 
 from inference.core.env import ENABLE_TENSOR_DATA_REPRESENTATION
@@ -12,10 +14,13 @@ from inference.core.workflows.core_steps.common.query_language.operations.utils 
     safe_stringify,
 )
 from inference.core.workflows.execution_engine.constants import CLASS_NAMES_KEY
-from inference_models import (
-    ClassificationPrediction,
-    MultiLabelClassificationPrediction,
-)
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    from inference_models import (
+        ClassificationPrediction,
+        MultiLabelClassificationPrediction,
+    )
 
 
 def extract_top_class(prediction: dict) -> Union[str, List[str]]:

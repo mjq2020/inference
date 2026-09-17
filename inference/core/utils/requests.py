@@ -1,7 +1,10 @@
 import re
+from typing import TYPE_CHECKING
 
-import aiohttp
 from requests import Response
+
+if TYPE_CHECKING:
+    import aiohttp
 
 API_KEY_PATTERN = re.compile(r"api_key=(.[^&]*)")
 SERVICE_SECRET_PATTERN = re.compile(r"service_secret=[^&]*")
@@ -18,7 +21,7 @@ def api_key_safe_raise_for_status(response: Response) -> None:
     response.raise_for_status()
 
 
-def api_key_safe_raise_for_status_aiohttp(response: aiohttp.ClientResponse) -> None:
+def api_key_safe_raise_for_status_aiohttp(response: "aiohttp.ClientResponse") -> None:
     request_is_successful = response.status < 400
     if request_is_successful:
         return None

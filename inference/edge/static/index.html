@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Workflow · Inference RV1126B</title>
+  <link rel="stylesheet" href="/ui/assets/app.css">
+  <script src="/ui/assets/common.js" defer></script>
+  <script src="/ui/assets/app.js" defer></script>
+</head>
+<body>
+  <div id="login-screen" class="login-screen" hidden>
+    <form id="login-form" class="login-card">
+      <div class="brand-mark">i<span>f</span></div><p class="eyebrow">INFERENCE / RV1126B</p>
+      <h1>连接你的工作空间</h1><p class="muted">输入应用中心配置的访问令牌，管理设备上的推理流程。</p>
+      <label>访问令牌<input id="login-token" name="token" type="password" autocomplete="current-password" placeholder="应用访问令牌"></label>
+      <button class="primary" type="submit">进入工作空间 <span>→</span></button><p id="login-error" role="alert" class="error"></p>
+      <p class="muted small">令牌仅用于登录，不保存在浏览器本地存储。</p>
+    </form>
+  </div>
+  <div id="workspace" class="workspace" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/"><span class="brand-mark">i<span>f</span></span><span>Inference<small>RV1126B · 工作空间</small></span></a>
+      <div class="sidebar-heading">我的流程 <button id="new-workflow" class="icon-button" title="新建流程" aria-label="新建流程">＋</button></div>
+      <nav id="workflow-list" aria-label="已保存的流程"></nav>
+      <button id="import-workflow" class="ghost full">↑ 导入 Workflow JSON</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <div class="sidebar-bottom"><a class="external-link" href="/build">Roboflow 在线画布 ↗</a><button id="settings-toggle" class="ghost full">运行设置</button><button id="logout" class="ghost full">退出登录</button><span class="device-badge"><i></i> 设备 NPU · RKNN</span></div>
+    </aside>
+    <main>
+      <header class="topbar"><div><p class="eyebrow">WORKFLOW STUDIO</p><input id="workflow-name" class="workflow-title" aria-label="流程名称" value="目标检测与计数"><div id="save-state" class="muted small">尚未保存</div></div><div class="actions"><button id="export-workflow" class="ghost">导出</button><button id="validate-workflow">校验流程</button><button id="save-workflow" class="primary">保存流程</button></div></header>
+      <section id="settings-panel" class="settings-panel" hidden><div><strong>设备运行设置</strong><p class="muted small">监听地址、访问令牌、存储及帧率上限由原生应用中心配置，重启应用后生效。</p></div><dl id="settings-values"></dl></section>
+      <div class="editor-toolbar"><div><span class="pill">本地可视化编排</span><span class="muted small">添加节点，点击输出圆点后再点击输入圆点连接</span></div><div class="actions"><button id="reset-template" class="ghost small">检测模板</button><button id="arrange-nodes" class="ghost small">整理画布</button><button id="delete-workflow" class="ghost small danger">删除流程</button></div></div>
+      <section class="editor-layout" aria-label="流程编辑器">
+        <aside class="palette"><div class="palette-heading">添加节点</div><div id="node-palette"></div><p class="small muted palette-tip">节点可拖动。选择节点，在右侧修改参数或输入来源。</p></aside>
+        <div id="canvas-scroll" class="canvas-scroll"><div id="canvas" class="canvas"><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div><div id="connect-hint" class="connect-hint" hidden>选择一个输入端口完成连接 · Esc 取消</div></div>
+        <aside id="inspector" class="inspector"><div class="empty-inspector"><span>⌘</span><h3>选择一个节点</h3><p>连接图像、模型与数据处理，构建属于你的流程。</p></div></aside>
+      </section>
+      <section class="runtime-panel"><div class="runtime-header"><div><h2>设备摄像头</h2><p id="pipeline-state" class="muted small">尚未启动</p></div><div class="actions"><label class="fps-label">帧率上限 <input id="video-fps" type="number" min="0.1" max="10" step="0.1" value="3"><span>FPS</span></label><button id="start-video" class="primary">▶ 启动流程</button><button id="pause-video" disabled>暂停</button><button id="stop-video" disabled>停止</button></div></div>
+        <div class="result-layout"><div class="metrics"><div><span class="muted small">最近目标数</span><strong id="detection-count">—</strong></div><div><span class="muted small">结果缓存</span><strong id="queue-count">0 <small>/ 2</small></strong></div></div><div id="result-summary" class="result-summary"><p class="muted">启动后显示流程输出。页面每秒读取一次最新结果，设备最多保留两帧。</p></div></div>
+        <details class="json-results"><summary>查看最近结果 JSON</summary><pre id="result-json">暂无结果</pre></details>
+      </section>
+      <footer><span id="model-summary">正在读取模型…</span><span>本地流程保存在设备 · 图像处理无需 PyTorch</span></footer>
+    </main>
+  </div>
+  <div id="toast" role="status" class="toast" hidden></div>
+  <dialog id="json-dialog"><form method="dialog"><header><h2>高级节点参数</h2><button aria-label="关闭">×</button></header><p class="muted small">编辑当前节点参数；连接与字段结构仍由原 Workflow 引擎校验。</p><textarea id="advanced-json" spellcheck="false" aria-label="节点 JSON 参数"></textarea><p id="advanced-error" class="error"></p><div class="actions"><button value="cancel">取消</button><button id="apply-advanced" class="primary" type="button">应用参数</button></div></form></dialog>
+</body>
+</html>

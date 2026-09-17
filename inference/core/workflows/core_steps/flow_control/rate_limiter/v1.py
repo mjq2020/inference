@@ -143,9 +143,17 @@ class RateLimiterBlockV1(WorkflowBlock):
         current_time = datetime.now()
         try:
             metadata = video_reference_image.video_metadata
-            current_time = datetime.fromtimestamp(
-                1 / metadata.fps * metadata.frame_number
-            )
+            if metadata.comes_from_video_file:
+                current_time = datetime.fromtimestamp(
+                    1 / metadata.fps * metadata.frame_number
+                )
+            else:
+                # Live capture may drop frames or run below its configured FPS.
+                # Counting processed frames would stretch the cooldown whenever
+                # processing is slower than the advertised capture rate.
+                current_time = datetime.fromtimestamp(
+                    metadata.frame_timestamp.timestamp()
+                )
         except Exception:
             # reference not passed, metadata not set, or not a video frame
             pass

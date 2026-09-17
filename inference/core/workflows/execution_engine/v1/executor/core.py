@@ -65,7 +65,12 @@ from inference.core.workflows.execution_engine.v1.executor.utils import (
     run_steps_in_parallel,
 )
 from inference.core.workflows.prototypes.block import WorkflowBlock
-from inference.usage_tracking.collector import usage_collector
+from inference.runtime import IS_RV1126B
+
+if IS_RV1126B:
+    from inference.usage_tracking.edge import usage_collector
+else:
+    from inference.usage_tracking.collector import usage_collector
 from inference.usage_tracking.stream_session import stream_session_id
 
 

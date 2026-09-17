@@ -3,7 +3,6 @@ from typing import Dict, Tuple
 
 import cv2
 import numpy as np
-from skimage.exposure import rescale_intensity
 
 from inference.core.env import (
     DISABLE_PREPROC_CONTRAST,

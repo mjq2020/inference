@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 from copy import copy
 from dataclasses import dataclass, replace
@@ -18,9 +20,17 @@ from typing import (
 
 import cv2
 import numpy as np
-import torch
+
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    import torch
+
 from pydantic import BaseModel, ConfigDict, Field
-from torchvision.io import ImageReadMode, decode_image, read_file
+
+if not IS_RV1126B:
+    from torchvision.io import ImageReadMode, decode_image, read_file
+
 from typing_extensions import Annotated, Literal
 
 from inference.core.entities.responses.action_recognition import (
@@ -325,6 +335,8 @@ class WorkflowImageData:
         self._image_reference = image_reference
         self._base64_image = base64_image
         self._numpy_image = numpy_image
+        if IS_RV1126B and tensor_image is not None:
+            raise ValueError("RV1126B workflows accept NumPy images only")
         self._tensor_image = (
             tensor_image.to(WORKFLOWS_IMAGE_TENSOR_DEVICE)
             if tensor_image is not None
@@ -402,11 +414,16 @@ class WorkflowImageData:
         offset_x: int,
         offset_y: int,
         preserve_video_metadata: bool = False,
+        _budget_reserved: bool = False,
     ) -> "WorkflowImageData":
         """
         Creates new instance of `WorkflowImageData` being a crop of original image,
         making adjustment to all metadata.
         """
+        if IS_RV1126B and not _budget_reserved:
+            from inference.edge.limits import reserve_crop
+
+            reserve_crop(cropped_image.shape[0] * cropped_image.shape[1])
         parent_metadata = ImageParentMetadata(
             parent_id=crop_identifier,
             origin_coordinates=OriginCoordinatesSystem(
@@ -577,6 +594,8 @@ class WorkflowImageData:
 
     @property
     def tensor_image(self) -> torch.Tensor:
+        if IS_RV1126B:
+            raise RuntimeError("Tensor images are unavailable in the RV1126B runtime")
         # Layout + mutation contract: see the class docstring. In-place mutators
         # of the returned tensor must call declare_tensor_image_mutated().
         if self._tensor_image is not None:
@@ -710,6 +729,11 @@ class WorkflowImageData:
 
     @property
     def base64_image(self) -> str:
+        if IS_RV1126B:
+            from inference.edge.limits import reserve_image_output
+
+            height, width = self._read_shape_without_materialization()
+            reserve_image_output(height * width)
         if self._base64_image is not None:
             return self._base64_image
         numpy_image = self.numpy_image

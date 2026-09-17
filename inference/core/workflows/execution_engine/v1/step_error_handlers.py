@@ -15,14 +15,17 @@ from inference.core.workflows.errors import (
     ClientCausedStepExecutionError,
     RuntimeLimitsCausedStepExecutionError,
 )
-from inference_models.errors import (
-    ModelNotFoundError,
-    ModelPackageAlternativesExhaustedError,
-    ModelPackageRestrictedError,
-    ModelRetrievalError,
-    UnauthorizedModelAccessError,
-)
-from inference_sdk.http.errors import HTTPCallErrorError
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    from inference_models.errors import (
+        ModelNotFoundError,
+        ModelPackageAlternativesExhaustedError,
+        ModelPackageRestrictedError,
+        ModelRetrievalError,
+        UnauthorizedModelAccessError,
+    )
+    from inference_sdk.http.errors import HTTPCallErrorError
 
 MODEL_ACCESS_ERROR_MESSAGES = {
     402: "Not enough credits to execute step {step_name}. Verify your workspace billing page.",
@@ -48,6 +51,9 @@ def legacy_step_error_handler(step_name: str, error: Exception) -> None:
 
 
 def extended_roboflow_errors_handler(step_name: str, error: Exception) -> None:
+    if IS_RV1126B:
+        return legacy_step_error_handler(step_name, error)
+
     if isinstance(error, FeatureDeprecatedError):
         raise ClientCausedStepExecutionError(
             block_id=step_name,

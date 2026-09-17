@@ -1,3 +1,4 @@
+from numbers import Real
 from typing import Any, Union
 
 from inference.core.workflows.core_steps.common.query_language.entities.enums import (
@@ -9,6 +10,7 @@ from inference.core.workflows.core_steps.common.query_language.errors import (
 from inference.core.workflows.core_steps.common.query_language.operations.utils import (
     safe_stringify,
 )
+from inference.runtime import IS_RV1126B
 
 
 def to_number(
@@ -47,6 +49,10 @@ def number_round(
 def multiply(
     value: Union[float, int], other: Union[float, int], execution_context: str, **kwargs
 ) -> Union[float, int]:
+    if IS_RV1126B and (not isinstance(value, Real) or not isinstance(other, Real)):
+        from inference.edge.limits import exceeded
+
+        exceeded("Multiply accepts numbers only in the RV1126B runtime")
     try:
         return value * other
     except (TypeError, ValueError) as e:

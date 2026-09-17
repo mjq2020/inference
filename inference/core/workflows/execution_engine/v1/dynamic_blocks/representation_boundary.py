@@ -21,25 +21,35 @@ is off — resolved once at import time into ``_TENSOR_REPRESENTATION_ACTIVE``
 the tensor pivot.
 """
 
+from __future__ import annotations
+
 import dataclasses
 from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import uuid4
 
 import numpy as np
 import supervision as sv
-import torch
+
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    import torch
 
 from inference.core.env import (
     ENABLE_TENSOR_DATA_REPRESENTATION,
     WORKFLOWS_IMAGE_TENSOR_DEVICE,
 )
-from inference.core.workflows.core_steps.common.serializers_tensor import (
-    serialise_native_classification,
-)
-from inference.core.workflows.core_steps.common.tensor_native import (
-    HOST_MIRROR_KEYS,
-    build_native_key_points,
-)
+
+if not IS_RV1126B:
+    from inference.core.workflows.core_steps.common.serializers_tensor import (
+        serialise_native_classification,
+    )
+if not IS_RV1126B:
+    from inference.core.workflows.core_steps.common.tensor_native import (
+        HOST_MIRROR_KEYS,
+        build_native_key_points,
+    )
+
 from inference.core.workflows.errors import DynamicBlockError
 from inference.core.workflows.execution_engine.constants import (
     CLASS_NAME_KEY,
@@ -70,18 +80,25 @@ from inference.core.workflows.execution_engine.v1.dynamic_blocks.entities import
     TensorCompatibility,
 )
 from inference.core.workflows.execution_engine.v1.entities import FlowControl
-from inference_models.models.base.classification import (
-    ClassificationPrediction,
-    MultiLabelClassificationPrediction,
-)
-from inference_models.models.base.instance_segmentation import InstanceDetections
-from inference_models.models.base.keypoints_detection import KeyPoints
-from inference_models.models.base.object_detection import Detections
-from inference_models.models.base.types import InstancesRLEMasks
-from inference_models.models.common.rle_utils import (
-    coco_rle_masks_to_numpy_mask,
-    torch_mask_to_coco_rle,
-)
+
+if not IS_RV1126B:
+    from inference_models.models.base.classification import (
+        ClassificationPrediction,
+        MultiLabelClassificationPrediction,
+    )
+if not IS_RV1126B:
+    from inference_models.models.base.instance_segmentation import InstanceDetections
+if not IS_RV1126B:
+    from inference_models.models.base.keypoints_detection import KeyPoints
+if not IS_RV1126B:
+    from inference_models.models.base.object_detection import Detections
+if not IS_RV1126B:
+    from inference_models.models.base.types import InstancesRLEMasks
+if not IS_RV1126B:
+    from inference_models.models.common.rle_utils import (
+        coco_rle_masks_to_numpy_mask,
+        torch_mask_to_coco_rle,
+    )
 
 # Resolved once at import time; the boundary is a strict identity when the flag
 # is off.
@@ -120,7 +137,7 @@ CONVERTIBLE_KIND_NAMES = _DETECTIONS_FAMILY_KIND_NAMES | {
     _IMAGE_KIND_NAME,
 }
 
-_NativeDetections = (Detections, InstanceDetections)
+_NativeDetections = () if IS_RV1126B else (Detections, InstanceDetections)
 
 
 class RepresentationBoundaryError(DynamicBlockError):
@@ -745,8 +762,12 @@ _MASK_CARRIER_KIND_NAMES = {
 } | _RLE_CARRIER_KIND_NAMES
 
 _NATIVE_CLASSIFICATION_TYPES = (
-    ClassificationPrediction,
-    MultiLabelClassificationPrediction,
+    ()
+    if IS_RV1126B
+    else (
+        ClassificationPrediction,
+        MultiLabelClassificationPrediction,
+    )
 )
 
 

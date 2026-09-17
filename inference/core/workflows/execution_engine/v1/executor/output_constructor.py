@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import traceback
 from collections import defaultdict
 from concurrent.futures import Future
@@ -10,9 +12,13 @@ from networkx import DiGraph
 
 from inference.core import logger
 from inference.core.env import ENABLE_TENSOR_DATA_REPRESENTATION
-from inference.core.workflows.core_steps.common.tensor_native import (
-    native_detections_to_root_coordinates,
-)
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    from inference.core.workflows.core_steps.common.tensor_native import (
+        native_detections_to_root_coordinates,
+    )
+
 from inference.core.workflows.core_steps.common.utils import (
     sv_detections_to_root_coordinates,
 )
@@ -46,13 +52,19 @@ from inference.core.workflows.execution_engine.v1.executor.utils import (
     maybe_resolve_futures,
     resolve_futures,
 )
-from inference_models.models.base.instance_segmentation import (
-    InstanceDetections as NativeInstanceDetections,
-)
-from inference_models.models.base.keypoints_detection import (
-    KeyPoints as NativeKeyPoints,
-)
-from inference_models.models.base.object_detection import Detections as NativeDetections
+
+if not IS_RV1126B:
+    from inference_models.models.base.instance_segmentation import (
+        InstanceDetections as NativeInstanceDetections,
+    )
+if not IS_RV1126B:
+    from inference_models.models.base.keypoints_detection import (
+        KeyPoints as NativeKeyPoints,
+    )
+if not IS_RV1126B:
+    from inference_models.models.base.object_detection import (
+        Detections as NativeDetections,
+    )
 
 
 def construct_workflow_output(
@@ -530,6 +542,11 @@ def serialize_single_workflow_result_field(
         try:
             return serializer(value)
         except Exception as error:
+            if IS_RV1126B:
+                from inference.edge.errors import EdgeError
+
+                if isinstance(error, EdgeError):
+                    raise
             # silent exception passing, as it is enough for one serializer to be applied
             # for union of kinds
             formatted_traceback = traceback.format_exc()
@@ -577,6 +594,8 @@ def _is_native_prediction(data: Any) -> bool:
     ``(KeyPoints, Detections)`` keypoint-detection tuple) emitted by ``_tensor``
     blocks under ``ENABLE_TENSOR_DATA_REPRESENTATION``. These are not ``sv.Detections``,
     so the existing sv-only coordinate-conversion gate skips them."""
+    if IS_RV1126B:
+        return False
     if isinstance(data, (NativeDetections, NativeInstanceDetections, NativeKeyPoints)):
         return True
     if isinstance(data, tuple) and len(data) == 2:

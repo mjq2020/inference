@@ -1,24 +1,30 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Callable, List, Literal, Optional, Tuple, Type, Union
 
 import cv2
 import numpy as np
 import supervision as sv
-import torch
-import torch.nn.functional as F
 from pydantic import AliasChoices, ConfigDict, Field
 
-from inference.core.workflows.core_steps.classical_cv.convert_grayscale.v1_tensor import (
-    _BY15,
-    _GRAY_ROUND,
-    _GRAY_SHIFT,
-    _GY15,
-    _RY15,
-)
-from inference.core.workflows.core_steps.common.tensor_native import (
-    TensorNativeDetections,
-    read_host_mirror,
-)
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    import torch
+    import torch.nn.functional as F
+
+    from inference.core.workflows.core_steps.classical_cv.convert_grayscale.v1_tensor import (
+        _BY15,
+        _GRAY_ROUND,
+        _GRAY_SHIFT,
+        _GY15,
+        _RY15,
+    )
+    from inference.core.workflows.core_steps.common.tensor_native import (
+        TensorNativeDetections,
+        read_host_mirror,
+    )
 from inference.core.workflows.core_steps.visualizations.common.base import (
     OUTPUT_IMAGE_KEY,
 )
@@ -742,13 +748,14 @@ _PEAKING_OPACITY = 0.6
 _PEAKING_THRESHOLD_PERCENT = 30.0
 _GRID_LEVEL = 128
 _PATCH_MARGIN = 4
-_SOBEL_KERNELS = torch.tensor(
-    [
-        [[[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]]],
-        [[[-1.0, -2.0, -1.0], [0.0, 0.0, 0.0], [1.0, 2.0, 1.0]]],
-    ],
-    dtype=torch.float32,
-)
+if not IS_RV1126B:
+    _SOBEL_KERNELS = torch.tensor(
+        [
+            [[[-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-1.0, 0.0, 1.0]]],
+            [[[-1.0, -2.0, -1.0], [0.0, 0.0, 0.0], [1.0, 2.0, 1.0]]],
+        ],
+        dtype=torch.float32,
+    )
 _BLEND_LUT_CACHE = {}
 _SOBEL_KERNEL_CACHE = {}
 
@@ -765,7 +772,7 @@ class _HostDetections:
 
 
 def _device_path_available(image: WorkflowImageData) -> bool:
-    if not image.is_tensor_materialised():
+    if IS_RV1126B or not image.is_tensor_materialised():
         return False
     channels, height, width = image.tensor_image.shape
     return channels in (1, 3) and min(height, width) >= 2
@@ -782,6 +789,8 @@ def _host_detections(
     """
     if detections is None or len(detections) == 0:
         return None
+    if IS_RV1126B:
+        return _HostDetections(xyxy=np.asarray(detections.xyxy).reshape(-1, 4))
     mirrored = read_host_mirror(
         bboxes_metadata=getattr(detections, "bboxes_metadata", None),
         expected_rows=len(detections),

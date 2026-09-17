@@ -6,11 +6,20 @@ Resolve ``roboflow_core/inner_workflow@v1`` steps that reference a saved workflo
 from __future__ import annotations
 
 import copy
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from inference.core.env import (
+    WORKFLOWS_MAX_INNER_WORKFLOW_COUNT,
+    WORKFLOWS_MAX_INNER_WORKFLOW_DEPTH,
+)
 from inference.core.workflows.errors import WorkflowDefinitionError
 from inference.core.workflows.execution_engine.v1.inner_workflow.constants import (
     USE_INNER_WORKFLOW_BLOCK_TYPE,
+)
+from inference.core.workflows.execution_engine.v1.inner_workflow.errors import (
+    InnerWorkflowCompositionCycleError,
+    InnerWorkflowNestingDepthError,
+    InnerWorkflowTotalCountError,
 )
 
 WORKFLOWS_CORE_INNER_WORKFLOW_SPEC_RESOLVER = (
@@ -122,12 +131,33 @@ def _normalize_inner_workflow_refs_in_workflow_dict(
     init_parameters: Dict[str, Any],
     resolver: InnerWorkflowSpecResolver,
     fetch_memo: Dict[Tuple[str, str, Optional[str]], Dict[str, Any]],
+    active_references: Tuple[Tuple[str, str, Optional[str]], ...] = (),
+    depth: int = 0,
+    expanded_count: Optional[List[int]] = None,
 ) -> None:
+    if expanded_count is None:
+        expanded_count = [0]
     for step in workflow_dict.get("steps", []) or []:
         if not isinstance(step, dict):
             continue
         if step.get("type") != USE_INNER_WORKFLOW_BLOCK_TYPE:
             continue
+
+        # Composition validation runs after resolution. Enforce the same limits
+        # before fetching/copying children so cycles and reference trees cannot
+        # exhaust memory before the ordinary compiler reaches that validation.
+        if depth + 1 > WORKFLOWS_MAX_INNER_WORKFLOW_DEPTH:
+            raise InnerWorkflowNestingDepthError(
+                "Inner workflow reference expansion exceeds nesting depth limit "
+                f"{WORKFLOWS_MAX_INNER_WORKFLOW_DEPTH}."
+            )
+        expanded_count[0] += 1
+        if expanded_count[0] > WORKFLOWS_MAX_INNER_WORKFLOW_COUNT:
+            raise InnerWorkflowTotalCountError(
+                "Inner workflow reference expansion exceeds total count limit "
+                f"{WORKFLOWS_MAX_INNER_WORKFLOW_COUNT}."
+            )
+        child_references = active_references
 
         has_ref = _inner_workflow_step_has_reference(step)
         has_inline = _inner_workflow_step_has_nonempty_workflow_definition(step)
@@ -154,6 +184,15 @@ def _normalize_inner_workflow_refs_in_workflow_dict(
             cache_key = _reference_cache_key(
                 workspace_id, saved_workflow_id, workflow_version_id
             )
+            if cache_key in active_references:
+                chain = " -> ".join(
+                    f"{workspace}/{workflow}@{version or 'latest'}"
+                    for workspace, workflow, version in (*active_references, cache_key)
+                )
+                raise InnerWorkflowCompositionCycleError(
+                    f"Inner workflow saved references contain a cycle: {chain}."
+                )
+            child_references = (*active_references, cache_key)
             if cache_key not in fetch_memo:
                 fetch_memo[cache_key] = resolver(
                     workspace_id,
@@ -176,7 +215,13 @@ def _normalize_inner_workflow_refs_in_workflow_dict(
         child_wf = step.get("workflow_definition")
         if isinstance(child_wf, dict):
             _normalize_inner_workflow_refs_in_workflow_dict(
-                child_wf, init_parameters, resolver, fetch_memo
+                child_wf,
+                init_parameters,
+                resolver,
+                fetch_memo,
+                active_references=child_references,
+                depth=depth + 1,
+                expanded_count=expanded_count,
             )
 
 

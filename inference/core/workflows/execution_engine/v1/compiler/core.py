@@ -60,9 +60,10 @@ from inference.core.workflows.execution_engine.v1.inner_workflow.reference_resol
     normalize_inner_workflow_references_in_definition,
 )
 from inference.core.workflows.prototypes.block import WorkflowBlockManifest
+from inference.runtime import IS_RV1126B
 
 COMPILATION_CACHE = BasicWorkflowsCache[GraphCompilationResult](
-    cache_size=256,
+    cache_size=4 if IS_RV1126B else 256,
     hash_functions=[
         (
             "workflow_definition",

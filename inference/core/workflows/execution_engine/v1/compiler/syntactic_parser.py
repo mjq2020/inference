@@ -23,9 +23,10 @@ from inference.core.workflows.execution_engine.v1.compiler.entities import (
     BlockSpecification,
     ParsedWorkflowDefinition,
 )
+from inference.runtime import IS_RV1126B
 
 WORKFLOW_DEFINITION_ENTITIES_CACHE = BasicWorkflowsCache[Type[BaseModel]](
-    cache_size=64,
+    cache_size=2 if IS_RV1126B else 64,
     hash_functions=[
         (
             "available_blocks",

@@ -1,4 +1,6 @@
-from typing import List, Literal, Optional, Type, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, List, Literal, Optional, Type, Union
 
 from pydantic import ConfigDict, Field, PositiveInt
 
@@ -11,7 +13,6 @@ from inference.core.env import (
     WORKFLOWS_REMOTE_EXECUTION_MAX_STEP_BATCH_SIZE,
     WORKFLOWS_REMOTE_EXECUTION_MAX_STEP_CONCURRENT_REQUESTS,
 )
-from inference.core.managers.base import ModelManager
 from inference.core.workflows.core_steps.common.entities import StepExecutionMode
 from inference.core.workflows.core_steps.common.utils import (
     attach_parents_coordinates_to_batch_of_sv_detections,
@@ -48,7 +49,9 @@ from inference.core.workflows.prototypes.block import (
     roboflow_platform_model,
     roboflow_platform_project,
 )
-from inference_sdk import InferenceConfiguration, InferenceHTTPClient
+
+if TYPE_CHECKING:
+    from inference.core.managers.base import ModelManager
 
 LONG_DESCRIPTION = """
 Run inference on a object-detection model hosted on or uploaded to Roboflow.
@@ -297,6 +300,8 @@ class RoboflowObjectDetectionModelBlockV2(WorkflowBlock):
         disable_active_learning: Optional[bool],
         active_learning_target_dataset: Optional[str],
     ) -> BlockResult:
+        from inference_sdk import InferenceConfiguration, InferenceHTTPClient
+
         api_url = (
             LOCAL_INFERENCE_API_URL
             if WORKFLOWS_REMOTE_API_TARGET != "hosted"

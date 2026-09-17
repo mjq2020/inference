@@ -32,6 +32,7 @@ from inference.core.workflows.prototypes.block import (
     WorkflowBlock,
     WorkflowBlockManifest,
 )
+from inference.runtime import IS_RV1126B
 
 LONG_DESCRIPTION = """
 Extract cropped image regions from input images based on bounding boxes from detection model predictions, supporting object detection, instance segmentation, and keypoint detection models with optional background removal using segmentation masks for focused region extraction and multi-stage analysis workflows.
@@ -217,6 +218,10 @@ def crop_image(
         if not cropped_image.size:
             crops.append({"crops": None, "predictions": None})
             continue
+        if IS_RV1126B:
+            from inference.edge.limits import reserve_crop
+
+            reserve_crop(cropped_image.shape[0] * cropped_image.shape[1])
         if mask_opacity > 0 and detections.mask is not None:
             detection_mask = detections.mask[idx]
             cropped_mask = np.stack(
@@ -234,6 +239,7 @@ def crop_image(
             cropped_image=cropped_image,
             offset_x=x_min,
             offset_y=y_min,
+            _budget_reserved=IS_RV1126B,
         )
 
         selected_detection = detections[idx]

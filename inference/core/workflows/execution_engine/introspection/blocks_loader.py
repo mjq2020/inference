@@ -10,13 +10,24 @@ from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 from inference.core.env import LOAD_ENTERPRISE_BLOCKS
-from inference.core.workflows.core_steps.loader import (
-    KINDS_DESERIALIZERS,
-    KINDS_SERIALIZERS,
-    REGISTERED_INITIALIZERS,
-    load_blocks,
-    load_kinds,
-)
+from inference.runtime import IS_RV1126B
+
+if IS_RV1126B:
+    from inference.core.workflows.core_steps.loader_rv1126b import (
+        KINDS_DESERIALIZERS,
+        KINDS_SERIALIZERS,
+        REGISTERED_INITIALIZERS,
+        load_blocks,
+        load_kinds,
+    )
+else:
+    from inference.core.workflows.core_steps.loader import (
+        KINDS_DESERIALIZERS,
+        KINDS_SERIALIZERS,
+        REGISTERED_INITIALIZERS,
+        load_blocks,
+        load_kinds,
+    )
 from inference.core.workflows.errors import (
     PluginInterfaceError,
     PluginLoadingError,
@@ -42,9 +53,11 @@ from inference.core.workflows.execution_engine.v1.dynamic_blocks.entities import
     BLOCK_SOURCE,
 )
 from inference.core.workflows.prototypes.block import WorkflowBlock
-from inference.enterprise.workflows.enterprise_blocks.loader import (
-    load_enterprise_blocks,
-)
+
+if not IS_RV1126B:
+    from inference.enterprise.workflows.enterprise_blocks.loader import (
+        load_enterprise_blocks,
+    )
 
 WORKFLOWS_PLUGINS_ENV = "WORKFLOWS_PLUGINS"
 WORKFLOWS_CORE_PLUGIN_NAME = "workflows_core"
@@ -252,7 +265,7 @@ def load_workflow_blocks(
 @lru_cache()
 def load_core_workflow_blocks() -> List[BlockSpecification]:
     core_blocks = load_blocks()
-    if LOAD_ENTERPRISE_BLOCKS:
+    if LOAD_ENTERPRISE_BLOCKS and not IS_RV1126B:
         core_blocks.extend(load_enterprise_blocks())
     already_spotted_blocks = set()
     result = []
@@ -604,6 +617,11 @@ def _load_plugin_serializers(
 
 def get_plugin_modules() -> List[str]:
     plugins_to_load = os.environ.get(WORKFLOWS_PLUGINS_ENV)
+    if IS_RV1126B and plugins_to_load:
+        raise PluginLoadingError(
+            public_message="Workflow plugins are unavailable in the RV1126B runtime",
+            context="blocks_loading",
+        )
     if plugins_to_load is None:
         return []
     return plugins_to_load.split(",")

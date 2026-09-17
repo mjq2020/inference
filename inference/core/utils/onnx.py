@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, List, Union
 
 import numpy as np
-import onnxruntime as ort
 
 if TYPE_CHECKING:
+    import onnxruntime as ort
     import torch
 
 ImageMetaType = Union[np.ndarray, "torch.Tensor"]
@@ -28,7 +28,7 @@ def get_onnxruntime_execution_providers(value: str) -> List[str]:
 
 
 def run_session_via_iobinding(
-    session: ort.InferenceSession, input_name: str, input_data: ImageMetaType
+    session: "ort.InferenceSession", input_name: str, input_data: ImageMetaType
 ) -> List[np.ndarray]:
     if isinstance(input_data, (np.ndarray, list)):
         # skip the iobinding and just run the session

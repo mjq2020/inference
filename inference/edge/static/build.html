@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roboflow Workflows</title><link rel="stylesheet" href="/ui/assets/app.css"><script src="/ui/assets/common.js" defer></script><script src="/ui/assets/builder.js" defer></script></head>
+<body class="builder-page">
+<header class="builder-header"><strong>Roboflow Workflows</strong><span id="builder-status" class="muted small">正在连接设备…</span><a href="/device">应用卡片</a><a href="/docs" target="_blank" rel="noopener">API</a><button id="builder-retry" hidden>重新连接</button><button id="builder-logout" hidden>退出</button></header>
+<details id="builder-connection" class="builder-note" open hidden>
+  <summary>在原生画布中连接设备运行</summary>
+  <ol>
+    <li>复制下方完整运行地址，再打开原生画布。</li>
+    <li>点击画布顶部的运行位置（通常为 <strong>Locally</strong>），在 <strong>Running On</strong> 弹窗中选择 <strong>Other</strong>，粘贴完整运行地址并点击 <strong>Connect</strong>。</li>
+    <li>连接成功后，在原生画布中测试工作流，修改后点击 <strong>Publish</strong> 保存到本设备；持续摄像头或 RTSP 推理请前往“应用卡片”配置、启动并查看结果。</li>
+  </ol>
+  <label for="builder-runtime-url">运行地址（本次登录有效）</label>
+  <div class="builder-password-row"><input id="builder-runtime-url" class="full" type="text" readonly autocomplete="off" spellcheck="false" aria-describedby="builder-runtime-help"><button id="builder-copy-runtime" type="button">复制运行地址</button></div>
+  <p id="builder-copy-status" role="status" aria-live="polite"></p>
+  <p id="builder-runtime-help">请保留地址中的完整路径，仅填设备 IP 和端口无法运行。此地址包含临时连接凭据，退出或登录满 12 小时后失效；重新登录后请重新复制，勿公开分享。</p>
+  <p>当前原生本地模式的 <strong>Save</strong> 草稿按钮不可用，请使用 <strong>Publish</strong> 保存修改。</p>
+</details>
+<main id="builder-login" class="builder-access" hidden>
+  <h1>连接设备上的 Workflows</h1><p>使用应用配置中的“访问口令”。进入后使用 Roboflow 原生画布，模型在设备 NPU 上运行。</p>
+  <form id="builder-login-form"><label for="builder-password">访问口令</label><div class="builder-password-row"><input id="builder-password" type="password" autocomplete="current-password" required><button type="button" id="builder-show-password">显示</button></div><button type="submit" class="primary">连接设备</button></form>
+  <p class="muted small">可在设备应用中心 → Inference → 配置中设置或更改访问口令。</p>
+</main>
+<main id="builder-launch" class="builder-access" hidden>
+  <h1>打开原生画布</h1><p>先复制上方运行地址，打开画布后按步骤设置运行位置。首次连接时，请允许浏览器访问本地网络。</p>
+  <a id="builder-open" class="button primary" target="_blank" rel="noopener noreferrer">打开原生 Workflow 画布</a>
+  <p class="muted small">原生画布需要浏览器联网；本地模式无需 Roboflow 账户。工作流和模型在设备上执行。</p>
+</main>
+<div id="builder-error" class="builder-error" role="alert" hidden></div>
+<iframe id="workflow-iframe" title="Roboflow Workflow Builder" referrerpolicy="no-referrer" allow="camera; clipboard-write; display-capture; microphone; fullscreen; local-network-access" hidden></iframe>
+</body></html>

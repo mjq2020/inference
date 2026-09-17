@@ -1,10 +1,12 @@
-# OFFLINE_MODE and the dependency environment (Hugging Face, Ultralytics
-# offline switches and cache locations) are established process-wide by
-# inference_models at import time - the single owner of that decision.
-# Import it before anything else so the latch exists no matter which
-# package the user touches first. `inference` depends on `inference_models`
-# unconditionally, so this import cannot fail on a supported install.
-import inference_models  # noqa: F401  isort: skip
+# Select the runtime before touching model libraries. The device distribution
+# deliberately has no inference-models / Torch / ONNX Runtime dependency.
+from inference.runtime import IS_RV1126B  # isort: skip
+
+if IS_RV1126B:
+    from inference._edge_bootstrap import OFFLINE_MODE  # noqa: F401
+else:
+    # Retain the existing process-wide offline owner for the full distribution.
+    import inference_models  # noqa: F401
 
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
@@ -38,6 +40,11 @@ def _import_from(module_path: str, attribute_name: str) -> Any:
 def __getattr__(name: str) -> Any:
     """Implement lazy loading for module attributes."""
     if name in _LAZY_ATTRIBUTES:
+        if IS_RV1126B:
+            raise RuntimeError(
+                f"inference.{name} belongs to the full runtime. The rv1126b "
+                "profile uses the RKNN application API in inference.edge."
+            )
         return _LAZY_ATTRIBUTES[name]()
     raise AttributeError(f"module 'inference' has no attribute '{name}'")
 

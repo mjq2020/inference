@@ -15,6 +15,7 @@ from inference.core.workflows.core_steps.common.query_language.operations.utils 
     safe_stringify,
 )
 from inference.core.workflows.execution_engine.entities.base import WorkflowImageData
+from inference.runtime import IS_RV1126B
 
 PROPERTY_EXTRACTORS = {
     ImageProperty.SIZE: lambda image: image.numpy_image.shape[0]
@@ -62,6 +63,11 @@ def encode_image_to_jpeg(
         )
     try:
         workflow_image: WorkflowImageData = value
+        if IS_RV1126B:
+            from inference.edge.limits import reserve_image_output
+
+            height, width = workflow_image.numpy_image.shape[:2]
+            reserve_image_output(height * width)
         return _image_to_jpeg_bytes(
             image=workflow_image.numpy_image, compression_level=compression_level
         )

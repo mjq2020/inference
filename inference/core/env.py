@@ -17,6 +17,7 @@ from inference.core.warnings import (
     InferenceModelsStackMissing,
     ModelDependencyMissing,
 )
+from inference.runtime import INFERENCE_RUNTIME_PROFILE, IS_RV1126B
 
 load_dotenv(os.getcwd() + "/.env")
 
@@ -202,7 +203,9 @@ DEFAULT_CONFIDENCE = 0.4
 CONFIDENCE = float(os.getenv(CONFIDENCE_ENV, DEFAULT_CONFIDENCE))
 
 # Flag to enable core models, default is True
-CORE_MODELS_ENABLED = str2bool(os.getenv("CORE_MODELS_ENABLED", True))
+CORE_MODELS_ENABLED = (
+    str2bool(os.getenv("CORE_MODELS_ENABLED", True)) and not IS_RV1126B
+)
 
 # Flag to enable CLIP core model, default is True
 CORE_MODEL_CLIP_ENABLED = str2bool(os.getenv("CORE_MODEL_CLIP_ENABLED", True))
@@ -238,7 +241,9 @@ SAM3_FINE_TUNED_MODELS_ENABLED = str2bool(
 # route stays registered as a 410-Gone deprecation stub. The stub — and
 # this flag — will be removed end of Q2 2026. Set CORE_MODEL_GAZE_ENABLED=False
 # to disable the stub now.
-CORE_MODEL_GAZE_ENABLED = str2bool(os.getenv("CORE_MODEL_GAZE_ENABLED", True))
+CORE_MODEL_GAZE_ENABLED = (
+    str2bool(os.getenv("CORE_MODEL_GAZE_ENABLED", True)) and not IS_RV1126B
+)
 if CORE_MODEL_GAZE_ENABLED:
     warnings.warn(
         "CORE_MODEL_GAZE_ENABLED is True: POST /gaze/gaze_detection is registered "
@@ -302,8 +307,13 @@ CORE_MODEL_YOLO_WORLD_ENABLED = str2bool(
 _PLATFORM_SPECIFIC_USE_INFERENCE_MODELS_DEFAULT = (
     "False" if platform.system() == "Windows" else "True"
 )
-USE_INFERENCE_MODELS = str2bool(
-    os.getenv("USE_INFERENCE_MODELS", _PLATFORM_SPECIFIC_USE_INFERENCE_MODELS_DEFAULT)
+USE_INFERENCE_MODELS = (
+    str2bool(
+        os.getenv(
+            "USE_INFERENCE_MODELS", _PLATFORM_SPECIFIC_USE_INFERENCE_MODELS_DEFAULT
+        )
+    )
+    and not IS_RV1126B
 )
 ALLOW_INFERENCE_MODELS_UNTRUSTED_PACKAGES = str2bool(
     os.getenv("ALLOW_INFERENCE_MODELS_UNTRUSTED_PACKAGES", "False")
@@ -345,8 +355,8 @@ CUDA_MEMORY_RECLAMATION_WATCHDOG_INTERVAL_SECONDS = float(
 DEVICE_ID = os.getenv("DEVICE_ID", None)
 
 # Whether or not to use PyTorch for preprocessing, default is False
-USE_PYTORCH_FOR_PREPROCESSING = str2bool(
-    os.getenv("USE_PYTORCH_FOR_PREPROCESSING", False)
+USE_PYTORCH_FOR_PREPROCESSING = (
+    str2bool(os.getenv("USE_PYTORCH_FOR_PREPROCESSING", False)) and not IS_RV1126B
 )
 
 # Flag to disable inference cache, default is False
@@ -374,12 +384,14 @@ DISABLE_PREPROC_GRAYSCALE = str2bool(os.getenv("DISABLE_PREPROC_GRAYSCALE", Fals
 # Flag to disable static crop preprocessing, default is False
 DISABLE_PREPROC_STATIC_CROP = str2bool(os.getenv("DISABLE_PREPROC_STATIC_CROP", False))
 
-# OFFLINE_MODE is decided once per process by inference_models._offline (the
-# single owner), which `import inference` triggers as its first statement.
-# The private marker env carries the latch into spawned child processes;
-# inference_models.configuration warns when the public variable is mutated
-# at runtime.
-from inference_models.configuration import OFFLINE_MODE
+# Both distributions establish the same process-wide offline latch in their
+# parent-package bootstrap. RKNN devices do not need the model distribution.
+if IS_RV1126B:
+    from inference._edge_bootstrap import OFFLINE_MODE, warn_if_offline_mode_changed
+
+    warn_if_offline_mode_changed()
+else:
+    from inference_models.configuration import OFFLINE_MODE
 
 if OFFLINE_MODE:
     # Republish the dependency offline switches on (re)import of this module,
@@ -416,7 +428,7 @@ if OFFLINE_MODE and SAM3_EXEC_MODE == "remote":
         SAM3_FINE_TUNED_MODELS_ENABLED = True
 
 # Flag to disable version check, default is False
-DISABLE_VERSION_CHECK = str2bool(os.getenv("DISABLE_VERSION_CHECK", False))
+DISABLE_VERSION_CHECK = str2bool(os.getenv("DISABLE_VERSION_CHECK", IS_RV1126B))
 if OFFLINE_MODE:
     DISABLE_VERSION_CHECK = True
 
@@ -576,7 +588,7 @@ SECURE_GATEWAY_HEALTH_CHECK_TIMEOUT = float(
 LOG_LEVEL = os.getenv("LOG_LEVEL", "WARNING")
 
 # Maximum number of active models, default is 8
-MAX_ACTIVE_MODELS = int(os.getenv("MAX_ACTIVE_MODELS", 8))
+MAX_ACTIVE_MODELS = int(os.getenv("MAX_ACTIVE_MODELS", 1 if IS_RV1126B else 8))
 
 # Maximum batch size, default is infinite
 MAX_BATCH_SIZE = os.getenv("MAX_BATCH_SIZE", None)
@@ -789,17 +801,19 @@ INFER_BUCKET = os.getenv(
     ),
 )
 
-ACTIVE_LEARNING_ENABLED = str2bool(os.getenv("ACTIVE_LEARNING_ENABLED", True))
+ACTIVE_LEARNING_ENABLED = (
+    str2bool(os.getenv("ACTIVE_LEARNING_ENABLED", True)) and not IS_RV1126B
+)
 if OFFLINE_MODE:
     ACTIVE_LEARNING_ENABLED = False
 ACTIVE_LEARNING_TAGS = safe_split_value(os.getenv("ACTIVE_LEARNING_TAGS", None))
 
 # Number inflight async tasks for async model manager
-NUM_PARALLEL_TASKS = int(os.getenv("NUM_PARALLEL_TASKS", 512))
+NUM_PARALLEL_TASKS = int(os.getenv("NUM_PARALLEL_TASKS", 1 if IS_RV1126B else 512))
 STUB_CACHE_SIZE = int(os.getenv("STUB_CACHE_SIZE", 256))
 # New stream interface variables
 PREDICTIONS_QUEUE_SIZE = int(
-    os.getenv("INFERENCE_PIPELINE_PREDICTIONS_QUEUE_SIZE", 512)
+    os.getenv("INFERENCE_PIPELINE_PREDICTIONS_QUEUE_SIZE", 2 if IS_RV1126B else 512)
 )
 RESTART_ATTEMPT_DELAY = int(os.getenv("INFERENCE_PIPELINE_RESTART_ATTEMPT_DELAY", 1))
 # DEFAULT_BUFFER_SIZE (VIDEO_SOURCE_BUFFER_SIZE) is defined further down - its
@@ -933,7 +947,9 @@ elif (
         stacklevel=1,
     )
     WORKFLOWS_STEP_EXECUTION_MODE = "local"
-WORKFLOWS_MAX_CONCURRENT_STEPS = int(os.getenv("WORKFLOWS_MAX_CONCURRENT_STEPS", "8"))
+WORKFLOWS_MAX_CONCURRENT_STEPS = int(
+    os.getenv("WORKFLOWS_MAX_CONCURRENT_STEPS", "1" if IS_RV1126B else "8")
+)
 WORKFLOWS_MAX_INNER_WORKFLOW_DEPTH = int(
     os.getenv("WORKFLOWS_MAX_INNER_WORKFLOW_DEPTH", "4")
 )
@@ -946,8 +962,9 @@ WORKFLOWS_REMOTE_EXECUTION_MAX_STEP_BATCH_SIZE = int(
 WORKFLOWS_REMOTE_EXECUTION_MAX_STEP_CONCURRENT_REQUESTS = int(
     os.getenv("WORKFLOWS_REMOTE_EXECUTION_MAX_STEP_CONCURRENT_REQUESTS", "8")
 )
-ALLOW_CUSTOM_PYTHON_EXECUTION_IN_WORKFLOWS = str2bool(
-    os.getenv("ALLOW_CUSTOM_PYTHON_EXECUTION_IN_WORKFLOWS", True)
+ALLOW_CUSTOM_PYTHON_EXECUTION_IN_WORKFLOWS = (
+    str2bool(os.getenv("ALLOW_CUSTOM_PYTHON_EXECUTION_IN_WORKFLOWS", True))
+    and not IS_RV1126B
 )
 
 # Modal configuration for Custom Python Blocks
@@ -1161,7 +1178,9 @@ PINNED_MODELS = (
     os.getenv("PINNED_MODELS").split(",") if os.getenv("PINNED_MODELS") else None
 )
 
-LOAD_ENTERPRISE_BLOCKS = str2bool(os.getenv("LOAD_ENTERPRISE_BLOCKS", "False"))
+LOAD_ENTERPRISE_BLOCKS = (
+    str2bool(os.getenv("LOAD_ENTERPRISE_BLOCKS", "False")) and not IS_RV1126B
+)
 TRANSIENT_ROBOFLOW_API_ERRORS = set(
     int(e)
     for e in os.getenv("TRANSIENT_ROBOFLOW_API_ERRORS", "").split(",")
@@ -1408,7 +1427,9 @@ HTTP_API_SHARED_WORKFLOWS_THREAD_POOL_ENABLED = str2bool(
     os.getenv("HTTP_API_SHARED_WORKFLOWS_THREAD_POOL_ENABLED", "True")
 )
 HTTP_API_SHARED_WORKFLOWS_THREAD_POOL_WORKERS = int(
-    os.getenv("HTTP_API_SHARED_WORKFLOWS_THREAD_POOL_WORKERS", "16")
+    os.getenv(
+        "HTTP_API_SHARED_WORKFLOWS_THREAD_POOL_WORKERS", "1" if IS_RV1126B else "16"
+    )
 )
 
 # Size of the anyio thread pool serving synchronous HTTP handlers.
@@ -1548,7 +1569,7 @@ if ENABLE_TENSOR_DATA_REPRESENTATION:
 DEFAULT_BUFFER_SIZE = int(
     os.getenv(
         "VIDEO_SOURCE_BUFFER_SIZE",
-        "8" if ENABLE_TENSOR_DATA_REPRESENTATION else "64",
+        "2" if IS_RV1126B else ("8" if ENABLE_TENSOR_DATA_REPRESENTATION else "64"),
     )
 )
 

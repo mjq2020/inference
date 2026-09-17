@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import math
 import uuid
@@ -21,13 +23,23 @@ import numpy as np
 import supervision as sv
 from supervision.config import CLASS_NAME_DATA_FIELD, ORIENTED_BOX_COORDINATES
 
-from inference.core.entities.requests.clip import ClipCompareRequest
-from inference.core.entities.requests.doctr import DoctrOCRInferenceRequest
-from inference.core.entities.requests.easy_ocr import EasyOCRInferenceRequest
-from inference.core.entities.requests.sam2 import Sam2InferenceRequest
-from inference.core.entities.requests.yolo_world import YOLOWorldInferenceRequest
-from inference.core.managers.base import ModelManager
-from inference.core.roboflow_api import ModelEndpointType
+from inference.runtime import IS_RV1126B
+
+if not IS_RV1126B:
+    from inference.core.entities.requests.clip import ClipCompareRequest
+if not IS_RV1126B:
+    from inference.core.entities.requests.doctr import DoctrOCRInferenceRequest
+if not IS_RV1126B:
+    from inference.core.entities.requests.easy_ocr import EasyOCRInferenceRequest
+if not IS_RV1126B:
+    from inference.core.entities.requests.sam2 import Sam2InferenceRequest
+if not IS_RV1126B:
+    from inference.core.entities.requests.yolo_world import YOLOWorldInferenceRequest
+if not IS_RV1126B:
+    from inference.core.managers.base import ModelManager
+if not IS_RV1126B:
+    from inference.core.roboflow_api import ModelEndpointType
+
 from inference.core.workflows.core_steps.common.keypoints import (
     KEYPOINT_PADDING_CLASS_NAME,
 )

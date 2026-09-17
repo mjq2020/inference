@@ -75,6 +75,7 @@ from inference.core.workflows.core_steps.common.query_language.operations.string
 from inference.core.workflows.core_steps.common.query_language.operations.timestamps.base import (
     timestamp_to_iso_format,
 )
+from inference.runtime import IS_RV1126B
 
 
 def execute_operations(
@@ -159,7 +160,15 @@ def chain(
     value: T, global_parameters: Dict[str, Any], functions: List[Callable[[T], V]]
 ) -> Callable[[T, Dict[str, Any]], V]:
     for function in functions:
+        if IS_RV1126B:
+            from inference.edge.limits import reserve_operation
+
+            reserve_operation(value)
         value = function(value, global_parameters=global_parameters)
+        if IS_RV1126B:
+            from inference.edge.limits import check_value
+
+            check_value(value)
     return value
 
 
