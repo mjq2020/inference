@@ -175,6 +175,24 @@ def test_offline_build_rejects_incomplete_or_unverified_fonts(
         build.collect_font_assets(font_assets)
 
 
+def test_long_compound_tag_is_unfolded_and_normalization_is_idempotent(tmp_path, tools):
+    build, audit = tools
+    tag = "cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64"
+    source = fake_wheel(build, tmp_path, tag=tag, files={
+        "example-4.65.0.dist-info/WHEEL": (
+            "Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: \n " + tag + "\n\n"
+        ).encode(),
+    })
+    derived = audit.normalize(source)
+    with zipfile.ZipFile(derived) as archive:
+        wheel = archive.read("example-4.65.0.dist-info/WHEEL").decode()
+        assert [line[5:] for line in wheel.splitlines() if line.startswith("Tag: ")] == [tag]
+        assert archive.read("example/__init__.py") == b"VALUE = 42\n"
+    before = derived.read_bytes()
+    assert audit.normalize(derived).read_bytes() == before
+    verify_record(derived)
+
+
 def test_python_tag_normalization_preserves_sources_and_provenance(tmp_path, tools):
     build, audit = tools
     source = fake_wheel(build, tmp_path)

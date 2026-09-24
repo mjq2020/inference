@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import zipfile
+from email import policy
 from email.parser import BytesParser
 from pathlib import Path
 
@@ -108,7 +109,9 @@ def normalize(path):
         }
     del metadata["Tag"]
     metadata["Tag"] = tag
-    files[wheel_name] = metadata.as_bytes()
+    # Keep the compound tag on one line. Some package validators read WHEEL
+    # tags line-by-line rather than unfolding RFC email continuation lines.
+    files[wheel_name] = metadata.as_bytes(policy=policy.compat32.clone(max_line_length=0))
     adaptation_name = dist_info + "/RV1126B_WHEEL_ADAPTATION.json"
     adaptation = (
         json.loads(files[adaptation_name])
