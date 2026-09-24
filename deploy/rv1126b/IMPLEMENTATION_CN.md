@@ -68,7 +68,7 @@ python inference_edge.py --model-root /path/to/model-store
 默认监听 `127.0.0.1:9001`。设备安装后可通过 SSH 转发访问：
 
 ```sh
-ssh -L 9001:127.0.0.1:9001 root@192.168.66.80
+ssh -L 9001:127.0.0.1:9001 root@<DEVICE_IP>
 curl http://127.0.0.1:9001/healthz
 curl http://127.0.0.1:9001/capabilities
 curl http://127.0.0.1:9001/model/registry

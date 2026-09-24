@@ -246,52 +246,6 @@ def test_video_eof_releases_model_and_stop_retries_a_failed_release():
     assert manager.clear_calls == 3
 
 
-def test_kit_app_wrapper_starts_health_endpoint_and_finishes(monkeypatch, tmp_path):
-    import urllib.request
-
-    monkeypatch.setitem(sys.modules, "appmgr", types.ModuleType("appmgr"))
-    monkeypatch.setitem(sys.modules, "appmgr.workflow_model_contract", types.SimpleNamespace(bindings=lambda *a, **k: []))
-
-    class App:
-        def setup(self, config):
-            self.config = config
-            self._stop_flag = False
-
-        def finish(self):
-            self.finished = True
-
-    monkeypatch.setitem(
-        sys.modules,
-        "kit.app",
-        types.SimpleNamespace(
-            App=App, run_app=lambda app: None, open_result_sink=lambda *a, **kw: None
-        ),
-    )
-    monkeypatch.setitem(
-        sys.modules,
-        "kit.config",
-        types.SimpleNamespace(appdata_root=lambda: str(tmp_path)),
-    )
-    with socket.socket() as reservation:
-        reservation.bind(("127.0.0.1", 0))
-        port = reservation.getsockname()[1]
-    monkeypatch.setenv("INFERENCE_EDGE_PORT", str(port))
-    path = Path(__file__).resolve().parents[2] / "deploy/rv1126b/app.py"
-    spec = importlib.util.spec_from_file_location("edge_deployment_test", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    app = module.InferenceEdgeApp()
-    app.setup({})
-    try:
-        app.prepare_runtime()
-        with urllib.request.urlopen(
-            f"http://127.0.0.1:{port}/healthz", timeout=3
-        ) as response:
-            assert json.load(response)["profile"] == "rv1126b"
-    finally:
-        app.finish()
-    assert not app._http_thread.is_alive()
-    assert app.finished
 
 
 def test_nested_crops_share_one_budget_across_all_steps():

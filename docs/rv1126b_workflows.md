@@ -1,3 +1,5 @@
+> 应用入口、配置和安装包构建现由 [ext/apps/inference-rv1126b](https://github.com/Seeed-Studio/recamera-pro-ext-api/tree/main/apps/inference-rv1126b) 维护，默认局域网访问。本文描述引擎工作原理；历史应用构建命令请改用 ext 的构建入口。
+
 # RV1126B 0.3.1 Workflow 使用与支持范围
 
 设备发行版通过 `INFERENCE_RUNTIME_PROFILE=rv1126b` 选择 NumPy/RKNN 路径，仍使用
@@ -64,7 +66,7 @@ RTSP 后端入口使用原视频 API 的 `video_configuration.video_reference`�
 本地入口见[官方本地画布脚本](https://cdnassets.roboflow.com/_app/5169.83dbac5a4107998554da.js)。
 这些是当前线上版本的调查依据，不是项目可控制的前端接口契约。
 
-同日用真实 Chromium 连接 `192.168.66.80`，打开已保存且含可视化输出的
+同日用真实 Chromium 连接测试设备，打开已保存且含可视化输出的
 `custom-workflow-2`，通过 Other 配置完整设备地址，选择 RTSP 并点击 Run，已复现
 同一报错。点击后浏览器记录到的设备请求为 0，WebRTC 初始化为 0；匿名用户和工作空间
 均为空。测试使用保留测试网段 URL，仅验证前端阻断，不作为实际 RTSP 拉流测试。
@@ -340,9 +342,6 @@ INFERENCE_RUNTIME_PROFILE=rv1126b python3 -m pytest -q \
 合计约 505.30 MiB。共享服务不是应用的第二个进程；这些样本不是长时峰值或内存上界。
 
 验收结束保留旧三个流程、新原生示例及原有口令/端口；恢复自动启动关闭、默认流程 ID
-为空，HTTP 服务继续运行、摄像头停止。原始
-[HTTP SDK 证据](/home/dq/github/RV1126B_Linux_IPC_SDK/artifacts/inference-rv1126b-native-workflows-20260915/test-workflow-sdk.json)、
-[自动启动证据](/home/dq/github/RV1126B_Linux_IPC_SDK/artifacts/inference-rv1126b-native-workflows-20260915/autostart-result.json)、
-[WebRTC 证据](/home/dq/github/RV1126B_Linux_IPC_SDK/artifacts/inference-rv1126b-native-workflows-20260915/webrtc-acceptance.json)
+为空，HTTP 服务继续运行、摄像头停止。原始 HTTP SDK、自动启动、WebRTC 验收记录
 和同步资源样本保存在本次工作区；完整版本摘要、包校验及大包上传的固件 nginx/JWT
 配置要求见[部署文档](../deploy/rv1126b/README.md)。
